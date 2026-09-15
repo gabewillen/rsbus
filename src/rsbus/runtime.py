@@ -153,11 +153,15 @@ class Persistence:
 class NodeRuntime(hsm.Instance):
     """Base runtime wired by NodeApplication (app.py) before Start."""
 
-    def __init__(self) -> None:
+    def __init__(self, cfg: NodeConfig | None = None) -> None:
         super().__init__()
-        self.cfg = NodeConfig()
+        self.cfg = cfg if cfg is not None else NodeConfig()
         self.transport: "Any" = None
-        self.nvm = Persistence(Path(self.cfg.state_dir) / f"{self.cfg.role}-{self.cfg.dd:08X}.json")
+        # NVM is created AFTER the real cfg is set (Persistence reads the
+        # state_dir from cfg; a default cfg would point to the shared
+        # .rsbus-state dir and leak state between instances).
+        self.nvm = Persistence(
+            Path(self.cfg.state_dir) / f"{self.cfg.role}-{self.cfg.dd:08X}.json")
         # Sync behavior hooks (Entry/Exit/Effect are synchronous) push frames
         # here and the tx pump drains them through the transport.
         self.tx_queue: asyncio.Queue | None = None

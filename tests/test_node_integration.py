@@ -32,9 +32,12 @@ async def _await_state(app, want_suffix, timeout=20.0):
 
 
 @pytest.mark.asyncio
-async def test_device_and_sc_full_startup():
-    dev_cfg = NodeConfig(role="device", iface="virtual", channel=VCHANNEL, dd=0x0A_B0_00_02, state_dir="/tmp/rsbus-it-dev", fast=True)
-    sc_cfg = NodeConfig(role="sc", iface="virtual", channel=VCHANNEL, dd=0x0C_A0_00_01, state_dir="/tmp/rsbus-it-sc", fast=True)
+async def test_device_and_sc_full_startup(tmp_path):
+    import shutil
+    shutil.rmtree("/tmp/rsbus-it-dev", ignore_errors=True)
+    shutil.rmtree("/tmp/rsbus-it-sc", ignore_errors=True)
+    dev_cfg = NodeConfig(role="device", iface="virtual", channel=VCHANNEL, dd=0x0A_B0_00_02, state_dir=str(tmp_path / "dev"), fast=True)
+    sc_cfg = NodeConfig(role="sc", iface="virtual", channel=VCHANNEL, dd=0x0C_A0_00_01, state_dir=str(tmp_path / "sc"), fast=True)
     dev_app = NodeApplication(dev_cfg)
     sc_app = NodeApplication(sc_cfg)
     try:

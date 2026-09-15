@@ -55,11 +55,10 @@ class NodeApplication:
     def _build_instance(self) -> NodeRuntime:
         if self.cfg.role == "sc":
             from .runtime import SubnetRuntime
-            inst = SubnetRuntime()
+            inst = SubnetRuntime(cfg=self.cfg)
         else:
             from .runtime import DeviceRuntime
-            inst = DeviceRuntime()
-        inst.cfg = self.cfg
+            inst = DeviceRuntime(cfg=self.cfg)
         inst.transport = self.transport
         inst.tx_queue = asyncio.Queue()
         inst.ram = {}
@@ -93,21 +92,18 @@ class NodeApplication:
             from .operations import (DeviceCommissioning,
                                      ParameterChangeDialog)
             from .runtime import DeviceRuntime
-            diag_inst = DeviceRuntime()
-            diag_inst.cfg = self.cfg
+            diag_inst = DeviceRuntime(cfg=self.cfg)
             diag_inst.transport = self.transport
             diag_inst.tx_queue = self.instance.tx_queue  # shared pump drains it
             diag_inst.ram = {}
             self._diag_app = _SubApp(diag_inst, DeviceDiagnostics, self.ctx)
             await self._diag_app.start()
 
-            comm_inst = DeviceRuntime()
-            comm_inst.cfg = self.cfg
+            comm_inst = DeviceRuntime(cfg=self.cfg)
             comm_inst.transport = self.transport
             comm_inst.tx_queue = self.instance.tx_queue
             comm_inst.ram = {}
-            param_inst = DeviceRuntime()
-            param_inst.cfg = self.cfg
+            param_inst = DeviceRuntime(cfg=self.cfg)
             param_inst.transport = self.transport
             param_inst.tx_queue = self.instance.tx_queue
             param_inst.ram = {}

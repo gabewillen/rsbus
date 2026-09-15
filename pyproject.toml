@@ -28,6 +28,7 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.25",
+    "pytest-cov>=7.1.0",
 ]
 
 [project.scripts]
@@ -40,3 +41,16 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/rsbus"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "pass$",
+]

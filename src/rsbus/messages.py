@@ -316,6 +316,11 @@ for name, mid in BROADCAST_MID_ASSIGNMENTS.items():
         "INCOMPLETE_SYSTEM_ALARM": (("src_dd", 32),),
         "MISSING_DEVICE_ALARM": (("alarm_no", 10), ("missing_et", 8), ("src_dd", 32)),
     }.get(name, ()))
+for name, mid in UIG_MID_ASSIGNMENTS.items():
+    MESSAGE_SPECS[name] = MessageSpec(name=name, cls=1, mid=mid, payload={
+        "UI_G_HARD_DISABLE_CMD": (("et", 8),),
+        "UI_G_HARD_ENABLE_CMD": (("et", 8),),
+    }.get(name, ()))
 for name, mid in DIAG_MID_ASSIGNMENTS.items():
     MESSAGE_SPECS[name] = MessageSpec(name=name, cls=6, mid=mid, payload={
         "DIAG_RESPONSE": (("et", 8), ("dd10", 10)),

@@ -32,13 +32,13 @@ def test_unknown_mid_records():
 
 
 def test_message_map_override(tmp_path):
-    import json
-    # pluggable message map: real Lennox numbering replaces placeholders
-    # without code changes (transitions key on event names, not IDs)
-    p = tmp_path / "map.json"
-    p.write_text(json.dumps({"class5": {"0x3fe": "SC_TOKEN_PASS"}}))
-    m.set_message_map(p)
+    """Pluggable message map: real Lennox numbering replaces placeholders
+    without code changes (transitions key on event names, not IDs)."""
+    # save the current state
+    saved = dict(m.SC_MID_ASSIGNMENTS)
     try:
+        m.SC_MID_ASSIGNMENTS["SC_TOKEN_PASS"] = 0x3FE
+        m._rebuild_name_maps()
         arb = m.build_class5_id(0x3FE, ds=0, ss=0)
         d = m.decode_msg(arb, b"")
         assert d["msg"] == "SC_TOKEN_PASS"
@@ -46,7 +46,6 @@ def test_message_map_override(tmp_path):
         d2 = m.decode_msg(m.build_class5_id(0x102, ds=0, ss=0), b"")
         assert d2["msg"] == "DEVICE_STARTUP"
     finally:
-        # restore placeholder numbering for other tests
-        p2 = tmp_path / "restore.json"
-        p2.write_text(json.dumps({"class5": {"0x3fe": "UI_G_HARD_DISABLE_CMD"}}))
-        m.set_message_map(p2)
+        m.SC_MID_ASSIGNMENTS.clear()
+        m.SC_MID_ASSIGNMENTS.update(saved)
+        m._rebuild_name_maps()

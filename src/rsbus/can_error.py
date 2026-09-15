@@ -61,12 +61,15 @@ def clear_comms_alarm(ctx, instance, event) -> None:
 
 def reboot_bus(ctx, instance, event) -> None:
     """¶0086: reset the device; clear the TRANSMIT error count (rx count
-    persists per CAN 2.0B)."""
-    instance.ram["tx_error_count"] = 0
+    persists per CAN 2.0B). Uses hsm.Set so the OnSet edges re-evaluate."""
+    async def _clear() -> None:
+        await hsm.Set(ctx, instance, "tx_error_count", 0)
+
+    instance.schedule(_clear())
 
 
 def count_entry(ctx, instance, event) -> None:
-    """Entry(bus_off) stub from the model; counters bookkeeping."""
+    """Entry stub from the model (unused; counters live in Attributes)."""
     pass
 
 

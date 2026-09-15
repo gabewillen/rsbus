@@ -1,34 +1,39 @@
 # rsbus
 
-Lennox RSBus (Residential Serial Bus) protocol implementation — hierarchical
-state machine models of the Lennox distributed-architecture HVAC
-communication network, implemented per the RSBus specification (US 2010/0106322
-A1, granted as US 8,452,906 B2) and its sibling patents.
+RSBus protocol model and reverse-engineering toolkit for the Lennox
+distributed-architecture HVAC communication network — hierarchical state
+machine models built on [stateforward-hsm](https://pypi.org/project/stateforward-hsm/),
+implemented per the RSBus specification (US 2010/0106322 A1, granted as
+US 8,452,906 B2) and its sibling patents.
 
-## What this does
+## What this covers
 
-Full CAN 2.0B protocol stack over a 24 VAC-supplied 4-wire bus (R, C,
-RSBus High = i+, RSBus Low = i−), modeled as event-driven hierarchical
-state machines using [stateforward-hsm](https://pypi.org/project/stateforward-hsm/):
+Event-driven hierarchical state machines over a 24 VAC-supplied 4-wire
+bus (R, C, RSBus High = i+, RSBus Low = i−):
 
 - **Device startup** (FIG. 12) — listen-only → DEVICE Startup → wait for
-  assignment → operational, with heartbeat monitoring and
-  bit-error resend per the Device-Designator delay algorithm
+  assignment → operational, with heartbeat monitoring and bit-error resend
 - **SC coordinator election** (FIG. 13A/13B/13C) — pre-startup announcement,
-  1-second arbitration, SC RAM list audit, token-pass leadership handover,
+  arbitration, SC RAM list audit, token-pass leadership handover,
   heartbeat-out with configuration/verification mode selection
-- **Equipment Type assignment** (FIG. 14) — the aSC-side per-device
-  arbitration for unknown-ET devices (increment/decrement walk-up loop
-  with ack/rejection verdicts)
+- **Equipment Type assignment** (FIG. 14) — aSC-side per-device arbitration
+  for unknown-ET devices
 - **Operations layer** (US 8,463,443 / US 8,255,086) — commissioning with
-  Control-Busy semantics, aSC supervision, replacement-part decision
-  tree (CF5 flag + missing-device check), parameter-change dialog with
-  allowed-range validation
+  Control-Busy semantics, aSC supervision, replacement-part decision tree,
+  parameter-change dialog with allowed-range validation
 - **Alarm & diagnostics** (US 2010/0106310) — Level 1 Diagnostic Mode,
-  alarm retrieval sessions, alarm-log coalescing, Unresponsive-Device
-  error count
+  alarm retrieval sessions, alarm-log coalescing, Unresponsive-Device count
 - **CAN fault confinement** — error-active → error-passive → bus-off
-  state machine with 5-minute recovery timer (Bosch CAN 2.0B ¶0083-0086)
+
+## Known gaps (deliberate — no wire data yet)
+
+- **Numeric MID assignments** are placeholders; `set_message_map()` /
+  `--message-map` swaps real Lennox numbering at runtime
+- **Byte-level payload maps** are inferred from the spec; capture session
+  validates them
+- **Blower/demand control** (FIG. 15 service vectors, capacity control)
+  — deliberately unmodeled, pending capture validation
+- **ISO 15765-2 transport sessions** — deliberate gap, pending need
 
 ## Quick start
 
@@ -48,8 +53,8 @@ run(role="device", iface="virtual", channel="bench", dd=0x0A000002, fast=True)
 python -m rsbus monitor --iface can0 --learn map.json --jsonl bus.jsonl
 
 # participating node (bench only — never on the live house bus)
-python -m rsbus node --role device --iface can0 --dd 0x0A000002
-python -m rsbus node --role sc --iface can0 --dd 0x0C000001 --spl 0
+python -m rsbus node --role device --iface can0 --dd 0x0A000002 --et 0x70
+python -m rsbus node --role sc --iface can0 --dd 0x0C000001 --spl 1
 ```
 
 ## Pluggable message map
@@ -63,25 +68,32 @@ python -m rsbus monitor --iface can0 --message-map real_map.json
 python -m rsbus node --role device --message-map real_map.json
 ```
 
-The JSON shape: `{"class5": {"0x106": "SC_COORDINATOR"}, "class3": {"0x1": "aSC_HEARTBEAT"}}`.
-Run `monitor --learn map.json` first to discover unknown MIDs from real
-traffic, name them, then load the map back into the node.
-
 ## Capture hardware
 
 The Waveshare 2-CH CAN HAT (2× MCP2515 + SN65HVD230) mounted on a
-Raspberry Pi provides socketcan. See the setup runbook below.
+Raspberry Pi provides socketcan.
 
 | Channel | Role |
 |---|---|
 | `can0` | live RSBus sniff: **listen-only**, 40 kbps |
 | `can1` | bench/injection channel for offline tests |
 
-### Wiring
+### Before wiring — SAFETY GATE
+
+The SN65HVD230 bus-pin common-mode range is limited (roughly −2…7 V).
+RSBus idle levels are NOT specified in the patent. **Before connecting
+the HAT to the bus pair, measure idle voltage on i+ and i− relative to
+C with a multimeter.**
+
+- Both lines ~2.5 V, equal → standard CAN PHY, wire directly.
+- Anything near 24 V → STOP: use a divider tap or transceiver rated
+  for the measured voltage before connecting the HAT.
+
+### Wiring (after measuring)
 
     RSBus i+  →  HAT CAN0_H terminal
     RSBus i−  →  HAT CAN0_L terminal
-    RSBus C   →  HAT GND terminal
+    RSBus C   →  HAT GND terminal (shared reference)
 
 Never wire R (24 VAC hot) to the HAT. Jumpers: VIO → 3.3 V,
 CAN0 120 Ω termination → OFF (sniffers don't terminate).
@@ -132,7 +144,6 @@ tools/
   capture.py                       host-side reader (candump path)
 docs/
   REVERSE-ENGINEERING.md           bench plan + thermostat correlation table
-  PATENT-AUDIT.md                  spec-coverage audit across the patent family
 ```
 
 ## Test
@@ -142,13 +153,11 @@ uv run pytest tests/ -q
 ```
 
 All tests run on python-can's in-process virtual bus — no hardware needed.
-The same stack rides socketcan (`can0`/`can1`) on the Raspberry Pi for
-bench use.
 
 ## Bench notes
 
-- The device node's class ET defaults to 0x30 (comfort-sensor class);
-  override via config for other device types.
+- Default ET for the device node is 0x70 (UI class — the useful role for
+  HA / app integration); override via `--et` for other Table I types.
 - The SC node starts in CONFIGURATION mode (CF0/CF1 rule per FIG. 13B-5
   step 1377); VERIFICATION soft-disables unknown devices per FIG. 13C-1d.
 - `--fast` compresses all timing values for bench/CI use.
