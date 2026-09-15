@@ -68,8 +68,11 @@ class NodeConfig:
     # FIG. 14 capacity clamp (Table I example: 32 SCs)
     max_devices: int = 32
     trace: bool = False            # print every TX frame (bench/diagnose)
-    et_request: int = 0x30         # the class ET this device announces (Table I;
-                                   # 0x30 = comfort-sensor-class bench default)
+    et_request: int = 0x70         # the class ET this device announces (Table I):
+                                   # 0x70-0x7B = UI (the useful role for HA / app
+                                   # integration — class 1 UIG messages give you
+                                   # parameter read/write and alert access);
+                                   # 0x40+ = comfort sensor; 0x10-0x1F = HVAC equipment
     # TX serialization: sync behaviors queue frames here; a pump drains them.
     tx_queue_level: int = 0
 

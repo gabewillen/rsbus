@@ -210,13 +210,14 @@ class _SubApp:
 
 def run(role: str, iface: str, channel: str, dd: int = None, state_dir: str = None,
         fast: bool = False, spl: int = 0, dpl: int = 0, prn: int = 0,
-        subnet: int = 0, link_local: bool = False):
+        subnet: int = 0, link_local: bool = False, et: int = None):
     """Synchronous entrypoint used by the CLI."""
     cfg = NodeConfig(role=role, iface=iface, channel=channel,
                      dd=dd if dd is not None else (0x0A000001 if role == "device" else 0x0C000001),
                      state_dir=state_dir or ".rsbus-state",
                      fast=fast, spl=spl, dpl=dpl, prn=prn, subnet=subnet,
-                     link_local=link_local)
+                     link_local=link_local,
+                     et_request=et if et is not None else 0x70)
 
     async def _main() -> None:
         app = NodeApplication(cfg)

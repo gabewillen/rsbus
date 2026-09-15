@@ -87,7 +87,7 @@ def _node(args) -> int:
     run(role=args.role, iface=args.iface, channel=args.channel, dd=dd,
         state_dir=args.state_dir, fast=args.fast,
         spl=args.spl, dpl=args.dpl, prn=args.prn, subnet=args.subnet,
-        link_local=args.link_local)
+        link_local=args.link_local, et=args.et)
     return 0
 
 
@@ -117,6 +117,7 @@ def main() -> None:
     node.add_argument("--prn", type=int, default=0)
     node.add_argument("--subnet", type=int, default=0)
     node.add_argument("--message-map", default=None, help="JSON message-map override path (real MID numbering)")
+    node.add_argument("--et", type=int, default=None, help="Equipment Type to announce (Table I; default 0x70 = UI class)")
     node.add_argument("--link-local", action="store_true", help="FIG. 13C-1e configuration-mode link-relay stand-in")
     node.set_defaults(func=_node)
 
