@@ -303,9 +303,8 @@ async def monitor_bus_while_assigned(ctx, instance, event) -> None:
         if time.monotonic() - last > period:
             instance.ram["missed_heartbeats"] = int(instance.ram.get("missed_heartbeats", 0)) + 1
             instance.ram["last_heartbeat_ts"] = time.monotonic()  # re-arm per-period
-            if int(instance.ram.get("missed_heartbeats", 0)) >= 1:
-                await hsm.Dispatch(ctx, instance, hsm.Event(name="heartbeat_lost"))
-                instance.ram["missed_heartbeats"] = 0
+            await hsm.Dispatch(ctx, instance, hsm.Event(name="heartbeat_lost"))
+            instance.ram["missed_heartbeats"] = 0
 
 
 # ============================================================ model shape ====

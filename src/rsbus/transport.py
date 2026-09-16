@@ -69,6 +69,10 @@ class CanTransport:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        try:
+            await asyncio.to_thread(self.bus.shutdown)
+        except Exception:
+            pass
 
     def bus_state(self) -> str:
         """('ERROR_ACTIVE', 'ERROR_PASSIVE', 'BUS_OFF') per kernel counters —

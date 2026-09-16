@@ -141,6 +141,7 @@ class NodeApplication:
             if self.cfg.trace:
                 try:
                     d = m.decode_id(arb_id)
+                    d["data_hex"] = data.hex().upper()
                     print(f"[trace-tx] {m.pretty_decode(d)} data={data.hex()}", file=sys.stderr)
                 except Exception:
                     pass
@@ -225,9 +226,14 @@ def run(role: str, iface: str, channel: str, dd: int = None, state_dir: str = No
 
         async def state_watchdog() -> None:
             # Light-touch commentary for the bench: print every state change.
+            # Exit naturally when stopped rather than relying on cancel.
             last = ""
-            while not app._stopped.is_set():
-                await asyncio.sleep(1.0)
+            while True:
+                try:
+                    await asyncio.wait_for(app._stopped.wait(), timeout=1.0)
+                    break
+                except asyncio.TimeoutError:
+                    pass
                 if app.instance:
                     now = app.instance.state()
                     if now != last:
@@ -238,8 +244,9 @@ def run(role: str, iface: str, channel: str, dd: int = None, state_dir: str = No
         try:
             await app.run_forever()
         finally:
-            watchdog.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await watchdog
+            # state_watchdog exits on its own once _stopped is set; no cancel
+            # needed (and a premature cancel would race its natural exit).
+            with contextlib.suppress(Exception):
+                await app.stop()
 
     asyncio.run(_main())

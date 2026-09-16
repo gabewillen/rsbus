@@ -536,7 +536,7 @@ def assign_et_si_for_device(ctx, instance, event) -> None:
             },
         )
         _spawn_et_assignment(instance, ctx, dd, dev.et, seed_event=seed)
-    elif known_et is not None:
+    else:
         # known device: re-assign its archived ET/SI and wait for finished
         _assign(instance, dd, int(known_et))
 

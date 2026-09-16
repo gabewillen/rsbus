@@ -340,7 +340,9 @@ def encode_msg(name: str, fields: dict[str, int] | None = None, *, ds: int = 0, 
     builder = BUILDERS[spec.cls]
     import inspect
     builder_params = inspect.signature(builder).parameters
-    addr_kwargs = dict(ds=ds, ss=ss, et=et, as_all=as_all, uiid=uiid, al=al, tp=tp, src_et=src_et, **(addr_args or {}))
+    addr_kwargs = dict(ds=ds, ss=ss, et=et, as_all=as_all, uiid=uiid,
+                       al=al, tp=tp, src_et=src_et)
+    addr_kwargs.update(addr_args or {})
     accepted: dict[str, int] = {"mid": spec.mid}
     for key, value in addr_kwargs.items():
         if key in builder_params:
@@ -474,5 +476,7 @@ def pretty_decode(d: dict[str, Any]) -> str:
     """One-line human-readable decode for the monitor."""
     name = d.get("msg") or "?"
     fields = d.get("fields") or {}
-    inner = ",".join(f"{k}={v:#x}" if isinstance(v, int) and v > 9 or isinstance(v, int) == False else f"{k}={v}" for k, v in fields.items())
+    inner = ",".join(
+        f"{k}={v:#x}" if isinstance(v, int) and v > 9 else f"{k}={v}"
+        for k, v in fields.items())
     return f"{d['class_name']:9s} {name:28s} id={d['raw']:#08X} data[{d['data_hex']}] {inner}".rstrip()
