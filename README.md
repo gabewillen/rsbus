@@ -91,12 +91,16 @@ C with a multimeter.**
 
 ### Wiring (after measuring)
 
+The HAT is a fourth node on a multidrop bus — a parallel tap, never a
+series pass-through. The thermostat↔furnace harness stays as built:
+
     RSBus i+  →  HAT CAN0_H terminal
     RSBus i−  →  HAT CAN0_L terminal
     RSBus C   →  HAT GND terminal (shared reference)
 
 Never wire R (24 VAC hot) to the HAT. Jumpers: VIO → 3.3 V,
-CAN0 120 Ω termination → OFF (sniffers don't terminate).
+CAN0 120 Ω termination → OFF (sniffers don't terminate). Keep the tap
+short (ideally < 10 cm), i+/i− twisted, away from R.
 
 ### Raspberry Pi setup
 
@@ -109,7 +113,15 @@ CAN0 120 Ω termination → OFF (sniffers don't terminate).
     sudo reboot
     dmesg | grep spi                      # verify MCP2515 probed
     sudo apt install can-utils
-    sudo ip link set can0 up type can bitrate 40000 listen-only on
+    # Bit rate is NOT specified anywhere in the patent family — sweep for it.
+    # 40000 is only our first guess (a standard CiA rate); with candump open,
+    # watch `ip -details -s link show can0` for RX counters moving while
+    # BUS-OFF / RX error counters stay 0 at the winning rate.
+    for BR in 40000 62500 125000 50000 25000 20000 10000 8000; do
+        sudo ip link set can0 down
+        sudo ip link set can0 up type can bitrate $BR listen-only on
+        echo "=== $BR ==="; timeout 5 candump -n 5 can0
+    done
 
 ### Capture session
 
